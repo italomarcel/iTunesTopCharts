@@ -103,10 +103,14 @@ class AlbumsViewModel(
     }
 
     fun updateSearchQuery(query: String) {
-        val trimmedQuery = query.trim()
-        if (_uiState.value.searchQuery != trimmedQuery) {
-            _uiState.value = _uiState.value.copy(searchQuery = trimmedQuery)
+        val validatedQuery = query.take(MAX_SEARCH_LENGTH).trim()
+        if (_uiState.value.searchQuery != validatedQuery) {
+            _uiState.value = _uiState.value.copy(searchQuery = validatedQuery)
         }
+    }
+
+    companion object {
+        private const val MAX_SEARCH_LENGTH = 100
     }
 
     fun retryLoadAlbums() {
