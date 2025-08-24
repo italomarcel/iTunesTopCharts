@@ -1,6 +1,7 @@
 package presentation.state
 
 import domain.model.Album
+import domain.model.AlbumError
 
 data class AlbumsUiState(
     val albums: List<Album> = emptyList(),
@@ -22,7 +23,18 @@ data class AlbumsUiState(
 }
 
 sealed class UiError {
-    object NetworkError : UiError()
-    object EmptyResponse : UiError()
+    data object NetworkError : UiError()
+    data object EmptyResponse : UiError()
     data class Unknown(val message: String) : UiError()
+
+    companion object {
+        fun fromAlbumError(albumError: AlbumError): UiError = when (albumError) {
+            is AlbumError.NetworkError -> NetworkError
+            is AlbumError.TimeoutError -> NetworkError
+            is AlbumError.EmptyResponse -> EmptyResponse
+            is AlbumError.ApiError -> Unknown("Server error: ${albumError.message}")
+            is AlbumError.ParseError -> Unknown("Data parsing error")
+            is AlbumError.CacheError -> Unknown("Cache error")
+        }
+    }
 }
