@@ -10,40 +10,31 @@ import kotlinx.coroutines.Dispatchers.Default
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.map
-import kotlinx.datetime.Instant
 
 class SQLDelightLocalDataSource(
     private val database: iTunesAlbumsDatabase
 ) : AlbumsLocalDataSource {
 
     override fun getAlbums(): Flow<List<Album>> =
-        database.albumsQueries
-            .selectAllAlbums(limit = DEFAULT_LIMIT)
-            .asFlow()
-            .mapToList(Default)
-            .map { entities -> entities.map { it.toDomain() } }
-            .catch { emit(emptyList()) }
+        database.albumsQueries.selectAllAlbums(limit = DEFAULT_LIMIT).asFlow().mapToList(Default)
+            .map { entities -> entities.map { it.toDomain() } }.catch { emit(emptyList()) }
 
-    override fun getAlbumById(albumId: AlbumId): Flow<Album?> =
-        database.albumsQueries
-            .selectAlbumById(albumId.value)
-            .asFlow()
-            .mapToOneOrNull(Default)
-            .map { it?.toDomain() }
-            .catch { emit(null) }
+    override fun getAlbumById(albumId: String): Flow<Album?> =
+        database.albumsQueries.selectAlbumById(albumId).asFlow().mapToOneOrNull(Default)
+            .map { it?.toDomain() }.catch { emit(null) }
 
     override suspend fun saveAlbums(albums: List<Album>) {
         database.transaction {
             database.albumsQueries.deleteAllAlbums()
             albums.forEach { album ->
                 database.albumsQueries.insertAlbum(
-                    album.id.value,
+                    album.id,
                     album.name,
-                    album.artist.value,
-                    album.imageUrl,
-                    album.releaseDate.epochSeconds,
-                    album.genre,
-                    album.iTunesUrl
+                    album.artistName,
+                    album.artworkUrl,
+                    album.releaseDate,
+                    album.category,
+                    album.albumUrl
                 )
             }
         }
@@ -55,11 +46,11 @@ class SQLDelightLocalDataSource(
 }
 
 private fun Albums.toDomain(): Album = Album(
-    id = AlbumId.fromString(id),
+    id = id,
     name = name,
-    artist = ArtistName.fromString(artist),
-    imageUrl = imageUrl,
-    releaseDate = Instant.fromEpochSeconds(releaseDate),
-    genre = genre,
-    iTunesUrl = iTunesUrl
+    artistName = artistName,
+    artworkUrl = artworkUrl,
+    releaseDate = releaseDate,
+    category = category,
+    albumUrl = albumUrl
 )

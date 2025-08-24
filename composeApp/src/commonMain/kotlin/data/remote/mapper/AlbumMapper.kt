@@ -1,23 +1,20 @@
 package data.remote.mapper
 
 import data.remote.dto.AlbumDto
-import domain.model.*
-import kotlinx.datetime.Instant
+import domain.model.Album
 
 object AlbumMapper {
+    fun AlbumDto.toDomain(): Album? = runCatching {
+        val imageUrl = images.lastOrNull()?.label.orEmpty()
 
-    fun List<AlbumDto>.toDomain(): List<Album> = mapNotNull { it.toDomain() }
-
-    private fun AlbumDto.toDomain(): Album? = runCatching {
         Album(
-            id = AlbumId.fromStringOrNull(id.attributes?.getValue("im:id")) ?: return null,
+            id = id.attributes["im:id"].orEmpty(),
             name = name.label,
-            artist = ArtistName.fromString(artist.label),
-            imageUrl = images.lastOrNull()?.label ?: return null,
-            releaseDate = releaseDate.label.runCatching(Instant::parse)
-                .getOrDefault(Instant.DISTANT_PAST),
-            genre = category.attributes?.get("label").orEmpty(),
-            iTunesUrl = link.attributes?.get("href").orEmpty()
+            artistName = artist.label,
+            artworkUrl = imageUrl,
+            releaseDate = releaseDate.label,
+            category = category.attributes["label"].orEmpty(),
+            albumUrl = link.attributes["href"].orEmpty()
         )
     }.getOrNull()
 }

@@ -3,7 +3,7 @@ package di
 import data.local.AlbumsLocalDataSource
 import data.local.SQLDelightLocalDataSource
 import data.remote.AlbumsRemoteDataSource
-import data.remote.KtorRemoteDataSource
+import data.remote.ITunesApi
 import data.repository.AlbumsRepositoryImpl
 import domain.repository.AlbumsRepository
 import domain.usecase.GetAlbumDetailsUseCase
@@ -17,7 +17,7 @@ val dataModule = module {
     includes(databaseModule, networkModule)
 
     singleOf(::SQLDelightLocalDataSource) bind AlbumsLocalDataSource::class
-    singleOf(::KtorRemoteDataSource) bind AlbumsRemoteDataSource::class
+    singleOf(::ITunesApi) bind AlbumsRemoteDataSource::class
 
     singleOf(::AlbumsRepositoryImpl) bind AlbumsRepository::class
 
