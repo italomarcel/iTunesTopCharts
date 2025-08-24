@@ -46,7 +46,11 @@ val networkModule = module {
             }
 
             install(DefaultRequest) {
-                header(HttpHeaders.Accept, "application/json, text/javascript, text/plain")
+                headers {
+                    append(HttpHeaders.Accept, "application/json, text/javascript, text/plain")
+                    append(HttpHeaders.Connection, "close")
+                    append(HttpHeaders.AcceptEncoding, "identity")
+                }
             }
 
             install(HttpRequestRetry) {
