@@ -12,21 +12,22 @@ class AlbumsRepositoryImpl(
     private val localDataSource: AlbumsLocalDataSource
 ) : AlbumsRepository {
 
-    override fun getTopAlbums(): Flow<AppResult<List<Album>>> =
-        localDataSource.getAlbums()
-            .map { albums ->
-                if (albums.isNotEmpty()) {
-                    AppResult.Success(albums)
-                } else {
-                    AppResult.Loading
-                }
-            }
-            .catch { emit(AppResult.Error(AlbumError.CacheError)) }
+    override fun getTopAlbums(): Flow<AppResult<List<Album>>> = flow {
+        emit(AppResult.Loading)
+        val cachedAlbums = localDataSource.getAlbums().first()
+        if (cachedAlbums.isNotEmpty()) {
+            emit(AppResult.Success(cachedAlbums))
+        } else {
+            emit(refreshAlbums())
+        }
+    }.catch {
+        emit(AppResult.Error(AlbumError.CacheError))
+    }
 
-    override suspend fun refreshAlbums(): AppResult<List<Album>> {
-        return when (val response = remoteDataSource.getTopAlbums()) {
+    override suspend fun refreshAlbums(): AppResult<List<Album>> =
+        when (val response = remoteDataSource.getTopAlbums()) {
             is AppResult.Success -> {
-                val albums = response.data.feed.results.toDomain()
+                val albums = response.data.feed.entry.mapNotNull { it.toDomain() }
                 if (albums.isNotEmpty()) {
                     localDataSource.saveAlbums(albums)
                     AppResult.Success(albums)
@@ -38,5 +39,4 @@ class AlbumsRepositoryImpl(
             is AppResult.Error -> response
             is AppResult.Loading -> AppResult.Error(AlbumError.NetworkError())
         }
-    }
 }
