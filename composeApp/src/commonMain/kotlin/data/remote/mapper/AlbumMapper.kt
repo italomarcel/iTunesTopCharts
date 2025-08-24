@@ -1,8 +1,7 @@
 package data.remote.mapper
 
 import data.remote.dto.AlbumDto
-import domain.model.*
-import kotlinx.datetime.Instant
+import domain.model.Album
 
 object AlbumMapper {
 
@@ -10,14 +9,13 @@ object AlbumMapper {
 
     private fun AlbumDto.toDomain(): Album? = runCatching {
         Album(
-            id = AlbumId.fromStringOrNull(id.attributes?.getValue("im:id")) ?: return null,
+            id = id.attributes?.getValue("im:id") ?: return null,
             name = name.label,
-            artist = ArtistName.fromString(artist.label),
-            imageUrl = images.lastOrNull()?.label ?: return null,
-            releaseDate = releaseDate.label.runCatching(Instant::parse)
-                .getOrDefault(Instant.DISTANT_PAST),
-            genre = category.attributes?.get("label").orEmpty(),
-            iTunesUrl = link.attributes?.get("href").orEmpty()
+            artistName = artist.label,
+            artworkUrl = images.lastOrNull()?.label ?: return null,
+            releaseDate = releaseDate.label,
+            category = category.attributes?.get("label").orEmpty(),
+            albumUrl = link.attributes?.get("href").orEmpty()
         )
     }.getOrNull()
 }
