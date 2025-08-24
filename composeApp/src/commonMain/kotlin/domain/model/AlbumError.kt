@@ -1,22 +1,27 @@
 package domain.model
 
 sealed class AlbumError : Exception() {
-    data object NetworkError : AlbumError()
+    data class NetworkError(
+        override val message: String = "Network connection failed"
+    ) : AlbumError()
+
     data object EmptyResponse : AlbumError()
     data object CacheError : AlbumError()
     data object TimeoutError : AlbumError()
+
     data class ApiError(
         val code: Int? = null,
         override val message: String
     ) : AlbumError()
+
     data class ParseError(override val message: String) : AlbumError()
 
     fun toUserMessage(): String = when (this) {
-        NetworkError -> "Please check your internet connection"
+        is NetworkError -> "Please check your internet connection"
         EmptyResponse -> "No albums found"
-        CacheError -> "Failed to load cached data"
+        CacheError -> "Please try again"
         TimeoutError -> "Connection timeout. Please try again"
-        is ApiError -> "Server error: $message"
-        is ParseError -> "Failed to process data"
+        is ApiError -> "Service temporarily unavailable"
+        is ParseError -> "Something went wrong. Please try again"
     }
 }
