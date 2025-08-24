@@ -13,8 +13,4 @@ actual val databaseModule: Module = module {
             "itunes_albums.db"
         )
     }
-
-    single<iTunesAlbumsDatabase> {
-        iTunesAlbumsDatabase(get())
-    }
 }
