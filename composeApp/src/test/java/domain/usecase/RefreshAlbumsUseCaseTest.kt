@@ -14,93 +14,180 @@ import java.util.concurrent.atomic.AtomicInteger
 
 class RefreshAlbumsUseCaseTest {
 
-    private val testAlbum = Album(
-        id = "1",
-        name = "Test Album",
-        artistName = "Test Artist",
-        artworkUrl = "http://example.com/art.jpg",
-        releaseDate = "2024-01-01",
-        category = "Pop",
-        albumUrl = "http://example.com/album"
-    )
+    private companion object {
+        const val CONCURRENT_CALLS_COUNT = 10
+        const val DELAY_MS = 10L
 
-    private fun repoWithRefresh(refreshImpl: suspend () -> AppResult<List<Album>>): AlbumsRepository =
-        object : AlbumsRepository {
-            override suspend fun refreshAlbums(): AppResult<List<Album>> = refreshImpl()
-            override fun getTopAlbums(): Flow<AppResult<List<Album>>> = emptyFlow()
+        val TEST_ALBUM = Album(
+            id = "1",
+            name = "Test Album",
+            artistName = "Test Artist",
+            artworkUrl = "http://example.com/art.jpg",
+            releaseDate = "2024-01-01",
+            category = "Pop",
+            albumUrl = "http://example.com/album"
+        )
+
+        val TEST_ALBUMS = listOf(TEST_ALBUM)
+        val EMPTY_ALBUMS = emptyList<Album>()
+    }
+
+    private fun mockRepository(
+        refreshResult: suspend () -> AppResult<List<Album>>
+    ): AlbumsRepository = object : AlbumsRepository {
+        override suspend fun refreshAlbums(): AppResult<List<Album>> = refreshResult()
+        override fun getTopAlbums(): Flow<AppResult<List<Album>>> = emptyFlow()
+    }
+
+    @Test
+    fun `given repository returns albums when refresh invoked then returns success with albums`() =
+        runTest {
+            // Given
+            val repository = mockRepository { AppResult.Success(TEST_ALBUMS) }
+            val useCase = RefreshAlbumsUseCase(repository)
+
+            // When
+            val result = useCase()
+
+            // Then
+            assertEquals(AppResult.Success(TEST_ALBUMS), result)
         }
 
     @Test
-    fun `Successful refresh returns list of albums`() = runTest {
-        val repo = repoWithRefresh { AppResult.Success(listOf(testAlbum)) }
-        val useCase = RefreshAlbumsUseCase(repo)
-        val result = useCase()
-        assertEquals(AppResult.Success(listOf(testAlbum)), result)
-    }
+    fun `given repository returns empty list when refresh invoked then returns success with empty list`() =
+        runTest {
+            // Given
+            val repository = mockRepository { AppResult.Success(EMPTY_ALBUMS) }
+            val useCase = RefreshAlbumsUseCase(repository)
 
-    @Test
-    fun `Successful refresh returns empty list`() = runTest {
-        val repo = repoWithRefresh { AppResult.Success(emptyList()) }
-        val useCase = RefreshAlbumsUseCase(repo)
-        val result = useCase()
-        assertEquals(AppResult.Success(emptyList<Album>()), result)
-    }
+            // When
+            val result = useCase()
 
-    @Test
-    fun `Repository returns empty response error`() = runTest {
-        val repo = repoWithRefresh { AppResult.Error(AlbumError.EmptyResponse) }
-        val useCase = RefreshAlbumsUseCase(repo)
-        val result = useCase()
-        assertTrue(result is AppResult.Error)
-        assertEquals(AlbumError.EmptyResponse, (result as AppResult.Error).error)
-    }
-
-    @Test
-    fun `Repository returns network error`() = runTest {
-        val repo = repoWithRefresh { AppResult.Error(AlbumError.NetworkError("Network error")) }
-        val useCase = RefreshAlbumsUseCase(repo)
-        val result = useCase()
-        assertTrue(result is AppResult.Error)
-        assertTrue((result as AppResult.Error).error is AlbumError.NetworkError)
-    }
-
-    @Test
-    fun `Repository returns cache error`() = runTest {
-        val repo = repoWithRefresh { AppResult.Error(AlbumError.CacheError) }
-        val useCase = RefreshAlbumsUseCase(repo)
-        val result = useCase()
-        assertTrue(result is AppResult.Error)
-        assertEquals(AlbumError.CacheError, (result as AppResult.Error).error)
-    }
-
-    @Test
-    fun `Coroutine cancellation during repository call`() = runTest {
-        val started = CompletableDeferred<Unit>()
-        val repo = repoWithRefresh {
-            started.complete(Unit)
-            delay(Long.MAX_VALUE)
-            AppResult.Success(emptyList())
+            // Then
+            assertEquals(AppResult.Success(EMPTY_ALBUMS), result)
         }
-        val useCase = RefreshAlbumsUseCase(repo)
-        val job = launch { useCase() }
-        started.await()
-        job.cancelAndJoin()
-        assertTrue(job.isCancelled)
-    }
 
     @Test
-    fun `Concurrent calls to invoke`() = runTest {
-        val counter = AtomicInteger(0)
-        val repo = repoWithRefresh {
-            delay(10)
-            counter.incrementAndGet()
-            AppResult.Success(listOf(testAlbum))
+    fun `given repository returns empty response error when refresh invoked then returns error`() =
+        runTest {
+            // Given
+            val expectedError = AlbumError.EmptyResponse
+            val repository = mockRepository { AppResult.Error(expectedError) }
+            val useCase = RefreshAlbumsUseCase(repository)
+
+            // When
+            val result = useCase()
+
+            // Then
+            assertErrorResult(result, expectedError)
         }
-        val useCase = RefreshAlbumsUseCase(repo)
-        val results = coroutineScope {
-            List(10) { async { useCase() } }.awaitAll()
+
+    @Test
+    fun `given repository returns network error when refresh invoked then returns network error`() =
+        runTest {
+            // Given
+            val networkError = AlbumError.NetworkError("Connection failed")
+            val repository = mockRepository { AppResult.Error(networkError) }
+            val useCase = RefreshAlbumsUseCase(repository)
+
+            // When
+            val result = useCase()
+
+            // Then
+            assertErrorResult(result, networkError)
+            assertTrue(
+                "Error should be NetworkError",
+                (result as AppResult.Error).error is AlbumError.NetworkError
+            )
         }
-        assertEquals(10, counter.get())
-        results.forEach { assertEquals(AppResult.Success(listOf(testAlbum)), it) }
+
+    @Test
+    fun `given repository returns cache error when refresh invoked then returns cache error`() =
+        runTest {
+            // Given
+            val cacheError = AlbumError.CacheError
+            val repository = mockRepository { AppResult.Error(cacheError) }
+            val useCase = RefreshAlbumsUseCase(repository)
+
+            // When
+            val result = useCase()
+
+            // Then
+            assertErrorResult(result, cacheError)
+        }
+
+    @Test
+    fun `given repository returns timeout error when refresh invoked then returns timeout error`() =
+        runTest {
+            // Given
+            val timeoutError = AlbumError.TimeoutError
+            val repository = mockRepository { AppResult.Error(timeoutError) }
+            val useCase = RefreshAlbumsUseCase(repository)
+
+            // When
+            val result = useCase()
+
+            // Then
+            assertErrorResult(result, timeoutError)
+        }
+
+    @Test
+    fun `given long running repository call when cancelled then coroutine is cancelled properly`() =
+        runTest {
+            // Given
+            val started = CompletableDeferred<Unit>()
+            val repository = mockRepository {
+                started.complete(Unit)
+                delay(Long.MAX_VALUE) // Infinite delay to test cancellation
+                AppResult.Success(EMPTY_ALBUMS)
+            }
+            val useCase = RefreshAlbumsUseCase(repository)
+
+            // When
+            val job = launch { useCase() }
+            started.await() // Ensure the call has started
+            job.cancelAndJoin()
+
+            // Then
+            assertTrue("Job should be cancelled", job.isCancelled)
+        }
+
+    @Test
+    fun `given repository call takes time when multiple concurrent calls made then all succeed independently`() =
+        runTest {
+            // Given
+            val callCounter = AtomicInteger(0)
+            val repository = mockRepository {
+                delay(DELAY_MS)
+                callCounter.incrementAndGet()
+                AppResult.Success(TEST_ALBUMS)
+            }
+            val useCase = RefreshAlbumsUseCase(repository)
+
+            // When
+            val results = coroutineScope {
+                List(CONCURRENT_CALLS_COUNT) {
+                    async { useCase() }
+                }.awaitAll()
+            }
+
+            // Then
+            assertEquals("All calls should complete", CONCURRENT_CALLS_COUNT, callCounter.get())
+            results.forEach { result ->
+                assertEquals(
+                    "Each call should return success",
+                    AppResult.Success(TEST_ALBUMS),
+                    result
+                )
+            }
+        }
+
+    private fun assertErrorResult(result: AppResult<List<Album>>, expectedError: AlbumError) {
+        assertTrue("Result should be error", result is AppResult.Error)
+        assertEquals(
+            "Error should match expected",
+            expectedError,
+            (result as AppResult.Error).error
+        )
     }
 }
