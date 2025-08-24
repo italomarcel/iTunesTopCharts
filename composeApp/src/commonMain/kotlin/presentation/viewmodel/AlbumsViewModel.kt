@@ -2,6 +2,8 @@ package presentation.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import domain.model.AppResult
+import domain.repository.AlbumsRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -9,7 +11,9 @@ import kotlinx.coroutines.launch
 import presentation.state.AlbumsUiState
 import presentation.state.UiError
 
-class AlbumsViewModel : ViewModel() {
+class AlbumsViewModel(
+    private val repository: AlbumsRepository
+) : ViewModel() {
 
     private val _uiState = MutableStateFlow(AlbumsUiState())
     val uiState: StateFlow<AlbumsUiState> = _uiState.asStateFlow()
@@ -18,24 +22,26 @@ class AlbumsViewModel : ViewModel() {
         loadAlbums()
     }
 
-    fun loadAlbums() {
+    private fun loadAlbums() {
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoading = true, error = null)
+            repository.getTopAlbums().collect { result ->
+                _uiState.value = when (result) {
+                    is AppResult.Loading -> {
+                        _uiState.value.copy(isLoading = true, error = null)
+                    }
 
-            try {
-                // TODO: Implementar chamada para o use case quando estiver disponível
-                // Por enquanto, simular carregamento
-                kotlinx.coroutines.delay(2000)
-                _uiState.value = _uiState.value.copy(
-                    albums = emptyList(),
-                    isLoading = false,
-                    error = null
-                )
-            } catch (e: Exception) {
-                _uiState.value = _uiState.value.copy(
-                    isLoading = false,
-                    error = UiError.Unknown(e.message ?: "Unknown error")
-                )
+                    is AppResult.Success -> {
+                        _uiState.value.copy(
+                            isLoading = false, albums = result.data, error = null
+                        )
+                    }
+
+                    is AppResult.Error -> {
+                        _uiState.value.copy(
+                            isLoading = false, error = UiError.fromAlbumError(result.error)
+                        )
+                    }
+                }
             }
         }
     }
@@ -43,20 +49,20 @@ class AlbumsViewModel : ViewModel() {
     fun refreshAlbums() {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isRefreshing = true)
+            when (val result = repository.refreshAlbums()) {
+                is AppResult.Success -> {
+                    _uiState.value = _uiState.value.copy(
+                        albums = result.data, isRefreshing = false, error = null
+                    )
+                }
 
-            try {
-                // TODO: Implementar refresh quando use case estiver disponível
-                kotlinx.coroutines.delay(1000)
-                _uiState.value = _uiState.value.copy(
-                    albums = emptyList(),
-                    isRefreshing = false,
-                    error = null
-                )
-            } catch (e: Exception) {
-                _uiState.value = _uiState.value.copy(
-                    isRefreshing = false,
-                    error = UiError.Unknown(e.message ?: "Refresh error")
-                )
+                is AppResult.Error -> {
+                    _uiState.value = _uiState.value.copy(
+                        isRefreshing = false, error = UiError.fromAlbumError(result.error)
+                    )
+                }
+
+                is AppResult.Loading -> {}
             }
         }
     }
