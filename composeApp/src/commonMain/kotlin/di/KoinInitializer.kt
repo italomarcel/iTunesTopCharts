@@ -10,7 +10,8 @@ fun initKoin(config: KoinAppDeclaration = {}) {
             networkModule,
             databaseModule,
             dataModule,
-            appModule
+            appModule,
+            commonDatabaseModule
         )
     }
 }

@@ -25,7 +25,6 @@ private object AlbumsScreenDefaults {
     val StateContentPadding = 32.dp
     val RetryButtonSpacing = 8.dp
 
-    const val MaxSearchLength = 100
     const val SearchPlaceholder = "Search albums or artists..."
     const val LoadingMessage = "Loading albums..."
     const val EmptyMessage = "No albums to display"
@@ -45,11 +44,9 @@ fun AlbumsScreen(
 ) {
     Column(modifier = modifier.fillMaxSize()) {
         AlbumsSearchBar(
-            query = uiState.searchQuery, onQueryChange = { query ->
-                if (query.length <= AlbumsScreenDefaults.MaxSearchLength) {
-                    onSearchQueryChange(query)
-                }
-            }, modifier = Modifier.fillMaxWidth().padding(AlbumsScreenDefaults.SearchPadding)
+            query = uiState.searchQuery,
+            onQueryChange = onSearchQueryChange, // ViewModel now handles validation
+            modifier = Modifier.fillMaxWidth().padding(AlbumsScreenDefaults.SearchPadding)
         )
 
         AlbumsContent(
@@ -98,7 +95,9 @@ private fun AlbumsContent(
 
 @Composable
 private fun AlbumsSearchBar(
-    query: String, onQueryChange: (String) -> Unit, modifier: Modifier = Modifier
+    query: String,
+    onQueryChange: (String) -> Unit,
+    modifier: Modifier = Modifier
 ) {
     OutlinedTextField(
         value = query,
@@ -132,9 +131,12 @@ private fun AlbumsSuccessState(
         }
 
         items(
-            items = albums, key = { album -> album.id }) { album ->
+            items = albums,
+            key = { album -> album.id }
+        ) { album ->
             AlbumCard(
-                album = album, onAlbumClick = onAlbumClick
+                album = album,
+                onAlbumClick = onAlbumClick
             )
         }
     }
@@ -142,10 +144,12 @@ private fun AlbumsSuccessState(
 
 @Composable
 private fun AlbumsRefreshButton(
-    onRefresh: () -> Unit, modifier: Modifier = Modifier
+    onRefresh: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
     Row(
-        modifier = modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End
+        modifier = modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.End
     ) {
         IconButton(onClick = onRefresh) {
             Icon(
@@ -157,20 +161,21 @@ private fun AlbumsRefreshButton(
 }
 
 @Composable
-private fun AlbumsLoadingState(
-    modifier: Modifier = Modifier
-) {
+private fun AlbumsLoadingState(modifier: Modifier = Modifier) {
     CenteredStateContent(modifier = modifier) {
         CircularProgressIndicator()
         Text(
-            text = AlbumsScreenDefaults.LoadingMessage, style = MaterialTheme.typography.bodyLarge
+            text = AlbumsScreenDefaults.LoadingMessage,
+            style = MaterialTheme.typography.bodyLarge
         )
     }
 }
 
 @Composable
 private fun AlbumsErrorState(
-    error: UiError?, onRetry: () -> Unit, modifier: Modifier = Modifier
+    error: UiError?,
+    onRetry: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
     CenteredStateContent(modifier = modifier) {
         Text(
@@ -180,10 +185,12 @@ private fun AlbumsErrorState(
         )
 
         Button(
-            onClick = onRetry, modifier = Modifier.fillMaxWidth()
+            onClick = onRetry,
+            modifier = Modifier.fillMaxWidth()
         ) {
             Icon(
-                imageVector = Icons.Default.Refresh, contentDescription = null
+                imageVector = Icons.Default.Refresh,
+                contentDescription = null
             )
             Spacer(modifier = Modifier.width(AlbumsScreenDefaults.RetryButtonSpacing))
             Text(AlbumsScreenDefaults.RetryButtonText)
@@ -192,9 +199,7 @@ private fun AlbumsErrorState(
 }
 
 @Composable
-private fun AlbumsEmptyState(
-    modifier: Modifier = Modifier
-) {
+private fun AlbumsEmptyState(modifier: Modifier = Modifier) {
     CenteredStateContent(modifier = modifier) {
         Text(
             text = AlbumsScreenDefaults.EmptyMessage,
@@ -206,10 +211,12 @@ private fun AlbumsEmptyState(
 
 @Composable
 private fun CenteredStateContent(
-    modifier: Modifier = Modifier, content: @Composable ColumnScope.() -> Unit
+    modifier: Modifier = Modifier,
+    content: @Composable ColumnScope.() -> Unit
 ) {
     Box(
-        modifier = modifier, contentAlignment = Alignment.Center
+        modifier = modifier,
+        contentAlignment = Alignment.Center
     ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,

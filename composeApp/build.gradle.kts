@@ -22,6 +22,16 @@ kotlin {
         iosTarget.binaries.framework {
             baseName = "ComposeApp"
             isStatic = true
+
+            binaryOption("bundleId", "com.company.itunes.ComposeApp")
+
+            freeCompilerArgs += listOf(
+                "-Xdisable-phases=Devirtualization",
+                "-Xg0"
+            )
+
+            linkerOpts("-lsqlite3")
+            linkerOpts("-framework", "Foundation")
         }
     }
 
@@ -43,6 +53,8 @@ kotlin {
             implementation(libs.ktor.serialization.kotlinx.json)
             implementation(libs.ktor.client.logging)
             implementation(libs.ktor.client.cio)
+
+            implementation(libs.androidx.lifecycle.viewmodel)
 
             implementation(libs.sqldelight.runtime)
             implementation(libs.sqldelight.coroutines.extensions)
@@ -160,6 +172,8 @@ sqldelight {
         create("iTunesAlbumsDatabase") {
             packageName.set("com.company.itunes.database")
             srcDirs.setFrom("src/commonMain/sqldelight")
+            verifyMigrations.set(false)
         }
     }
+    linkSqlite = true
 }

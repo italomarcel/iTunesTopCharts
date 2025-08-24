@@ -9,32 +9,29 @@ import io.ktor.client.request.*
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
 import kotlinx.serialization.json.Json
-import org.koin.core.qualifier.named
 import org.koin.dsl.module
 import kotlin.time.Duration.Companion.seconds
 
-private object NetworkDefaults {
+private object NetworkConfig {
     const val TIMEOUT_SECONDS = 30L
     val TIMEOUT_DURATION = TIMEOUT_SECONDS.seconds
     const val MAX_RETRIES = 3
+
+    val jsonConfig = Json {
+        ignoreUnknownKeys = true
+        isLenient = true
+        prettyPrint = false
+        encodeDefaults = false
+    }
 }
 
 val networkModule = module {
-
-    single(named("jsonConfig")) {
-        Json {
-            ignoreUnknownKeys = true
-            isLenient = true
-            prettyPrint = false
-            encodeDefaults = false
-        }
-    }
-
     single {
         HttpClient {
             install(ContentNegotiation) {
-                json(get(named("jsonConfig")), ContentType.Application.Json)
-                json(get(named("jsonConfig")), ContentType.Text.JavaScript)
+                json(NetworkConfig.jsonConfig, ContentType.Application.Json)
+                json(NetworkConfig.jsonConfig, ContentType.Text.JavaScript)
+                json(NetworkConfig.jsonConfig, ContentType.Text.Plain)
             }
 
             install(Logging) {
@@ -43,18 +40,17 @@ val networkModule = module {
             }
 
             install(HttpTimeout) {
-                requestTimeoutMillis = NetworkDefaults.TIMEOUT_DURATION.inWholeMilliseconds
-                connectTimeoutMillis = NetworkDefaults.TIMEOUT_DURATION.inWholeMilliseconds
-                socketTimeoutMillis = NetworkDefaults.TIMEOUT_DURATION.inWholeMilliseconds
+                requestTimeoutMillis = NetworkConfig.TIMEOUT_DURATION.inWholeMilliseconds
+                connectTimeoutMillis = NetworkConfig.TIMEOUT_DURATION.inWholeMilliseconds
+                socketTimeoutMillis = NetworkConfig.TIMEOUT_DURATION.inWholeMilliseconds
             }
 
             install(DefaultRequest) {
-                header("Accept", "application/json, text/javascript")
-                header("Content-Type", "application/json")
+                header(HttpHeaders.Accept, "application/json, text/javascript, text/plain")
             }
 
             install(HttpRequestRetry) {
-                retryOnServerErrors(maxRetries = NetworkDefaults.MAX_RETRIES)
+                retryOnServerErrors(maxRetries = NetworkConfig.MAX_RETRIES)
                 exponentialDelay()
             }
         }
