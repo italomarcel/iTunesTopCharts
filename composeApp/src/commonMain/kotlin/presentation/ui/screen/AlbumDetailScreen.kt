@@ -22,42 +22,32 @@ private object AlbumDetailScreenDefaults {
     const val ReleaseDateLabel = "Release Date: "
 }
 
-private fun formatReleaseDate(date: String?): String =
-    date?.substringBefore('T')?.let { datePart ->
-        runCatching {
-            val localDate = LocalDate.parse(datePart)
-            val month =
-                localDate.month.name.lowercase().replaceFirstChar(Char::titlecaseChar).take(3)
-            "$month ${localDate.dayOfMonth}, ${localDate.year}"
-        }.getOrDefault("-")
-    } ?: "-"
+private fun formatReleaseDate(date: String?): String = date?.substringBefore('T')?.let { datePart ->
+    runCatching {
+        val localDate = LocalDate.parse(datePart)
+        val month = localDate.month.name.lowercase().replaceFirstChar(Char::titlecaseChar).take(3)
+        "$month ${localDate.dayOfMonth}, ${localDate.year}"
+    }.getOrDefault("-")
+} ?: "-"
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AlbumDetailScreen(
-    album: Album,
-    onBack: () -> Unit,
-    modifier: Modifier = Modifier
+    album: Album, onBack: () -> Unit, modifier: Modifier = Modifier
 ) {
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text(album.name ?: "-") },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = AlbumDetailScreenDefaults.BackContentDescription
-                        )
-                    }
+            TopAppBar(title = { Text(album.name ?: "-") }, navigationIcon = {
+                IconButton(onClick = onBack) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = AlbumDetailScreenDefaults.BackContentDescription
+                    )
                 }
-            )
-        }
-    ) { padding ->
+            })
+        }) { padding ->
         Box(
-            modifier = modifier
-                .fillMaxSize()
-                .padding(padding)
+            modifier = modifier.fillMaxSize().padding(padding)
                 .padding(AlbumDetailScreenDefaults.ContentPadding),
             contentAlignment = Alignment.Center
         ) {

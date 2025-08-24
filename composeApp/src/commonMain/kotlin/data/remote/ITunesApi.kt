@@ -10,6 +10,7 @@ import io.ktor.client.plugins.*
 import io.ktor.http.*
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.CancellationException
+import utils.runSuspendCatching
 
 class ITunesApi(private val client: HttpClient) : AlbumsRemoteDataSource {
 
@@ -36,15 +37,5 @@ class ITunesApi(private val client: HttpClient) : AlbumsRemoteDataSource {
 
         is RedirectResponseException -> AlbumError.NetworkError("Too many redirects")
         else -> AlbumError.NetworkError(message ?: "Unknown network error")
-    }
-}
-
-private suspend inline fun <R> runSuspendCatching(block: suspend () -> R): Result<R> {
-    return try {
-        Result.success(block())
-    } catch (cancellationException: CancellationException) {
-        throw cancellationException
-    } catch (e: Throwable) {
-        Result.failure(e)
     }
 }

@@ -14,8 +14,10 @@ import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.CancellationException
 import presentation.state.AlbumsUiState
 import presentation.state.UiError
+import utils.runSuspendCatching
 
 class AlbumsViewModel(
     private val repository: AlbumsRepository
@@ -72,7 +74,7 @@ class AlbumsViewModel(
         refreshJob = viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isRefreshing = true)
 
-            runCatching { repository.refreshAlbums() }
+            runSuspendCatching { repository.refreshAlbums() }
                 .onSuccess { result ->
                     _uiState.value = when (result) {
                         is AppResult.Success -> _uiState.value.copy(
@@ -109,10 +111,6 @@ class AlbumsViewModel(
         }
     }
 
-    companion object {
-        private const val MAX_SEARCH_LENGTH = 100
-    }
-
     fun retryLoadAlbums() {
         _uiState.value = _uiState.value.copy(error = null)
         loadAlbums()
@@ -122,5 +120,9 @@ class AlbumsViewModel(
         super.onCleared()
         loadJob?.cancel()
         refreshJob?.cancel()
+    }
+
+    companion object {
+        private const val MAX_SEARCH_LENGTH = 100
     }
 }
