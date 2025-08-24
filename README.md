@@ -1,43 +1,132 @@
 # iTunesTopCharts
 
-Kotlin Multiplatform (KMP) app to retrieve and save top charts from iTunes.
+A Kotlin Multiplatform app that displays the top music albums from iTunes, with offline support and search functionality.
+
+## Features
+
+- 📱 **Cross-platform**: Shared business logic between Android and iOS
+- 🎵 **iTunes Integration**: Fetches real-time top 100 albums 
+- 💾 **Offline Support**: Local database with SQLDelight
+- 🔍 **Search & Filter**: Find albums by name or artist
+- 🔄 **Pull to Refresh**: Always get the latest charts
+- 🎨 **Native UI**: Jetpack Compose for Android, SwiftUI for iOS
+
+## Tech Stack
+
+| Layer | Technology |
+|-------|------------|
+| **Shared Logic** | Kotlin Multiplatform |
+| **Android UI** | Jetpack Compose |
+| **iOS UI** | SwiftUI |
+| **Networking** | Ktor Client |
+| **Database** | SQLDelight |
+| **DI** | Koin |
+| **Architecture** | Clean Architecture + MVVM |
 
 ## Requirements
 
-- **Android Studio**: Giraffe (2022.3.1) or newer
-- **Kotlin**: 1.9.0 or newer
-- **Xcode**: 14.1 or newer
-- **Gradle**: 8.0 or newer
+- **Android Studio**: 2024.1.1 (Koala) or newer
+- **Kotlin**: 2.1.0
+- **Xcode**: 15.0 or newer (for iOS development)
+- **Gradle**: 8.7 or newer
+- **iOS Deployment Target**: 14.0+
+- **Android API Level**: 24+
 
-## Architecture
+## Project Structure
 
-This project uses a shared KMP module for business logic, networking, and data storage, following Clean Architecture principles in the business logic layer.
-- **Presentation**: Jetpack Compose (Android), SwiftUI (iOS)
-- **Dependency Injection**: Koin
-- **Database**: SQLDelight
-- **Networking**: Ktor Client
-- **Business Logic**: Clean Architecture (domain, data, presentation separation)
+```
+composeApp/
+├── commonMain/          # Shared Kotlin code
+│   ├── data/           # Repositories, API, Database
+│   ├── di/             # Injections and modules
+│   ├── domain/         # Business logic, Use cases
+│   └── presentation/   # ViewModels, UI State
+├── androidMain/        # Android-specific code
+└── iosMain/           # iOS-specific code
 
-## Running the Project
+iosApp/                 # iOS Xcode project
+└── iosApp.xcodeproj
+```
 
-### Android
+## Getting Started
 
-1. Open the project in Android Studio.
-2. Select the `composeApp` run configuration.
-3. Click **Run**.
+### Android Setup
 
-### iOS
+1. Clone the repository
+2. Open in Android Studio
+3. Sync project with Gradle files
+4. Select `composeApp` configuration
+5. Run on device or emulator
 
-1. Open `iosApp/iosApp.xcodeproj` in Xcode.
-2. Select a simulator or device.
-3. Build and run.
+### iOS Setup
 
-> **Note:** No need to run `pod install` if you are not using CocoaPods.
+1. Ensure you have Xcode installed
+2. Open `iosApp/iosApp.xcodeproj` in Xcode
+3. Set your Development Team in project settings
+4. Select target device/simulator
+5. Build and run
 
-## SQLDelight
+## Development
 
-SQLDelight Gradle tasks generate database code automatically.  
-To generate or update database code, run:
+### Database Schema Updates
 
-```sh
+When modifying SQLDelight schemas:
+```bash
 ./gradlew generateSqlDelightInterface
+```
+
+### Clean Build
+```bash
+./gradlew clean
+./gradlew cleanBuildCache
+```
+
+## API Integration
+
+The app integrates with iTunes Search API:
+- **Endpoint**: `https://itunes.apple.com/us/rss/topalbums/limit=100/json`
+- **Format**: JSON with nested structure
+- **Rate Limiting**: Handled with retry mechanisms
+- **Timeout**: 30 seconds with exponential backoff
+
+## Troubleshooting
+
+### iOS Build Issues
+
+**SQLite Linker Errors:**
+- Ensure `-lsqlite3` is in linker flags
+- Clean derived data: `Product → Clean Build Folder`
+
+**Memory Issues:**
+```bash
+# Increase Gradle memory
+./gradlew -Xmx8g :composeApp:linkDebugFrameworkIosArm64
+```
+
+### Android Build Issues
+
+**OutOfMemoryError:**
+Add to `gradle.properties`:
+```
+org.gradle.jvmargs=-Xmx8192m
+```
+
+## Contributing
+
+1. Fork the project
+2. Create your feature branch
+3. Follow Kotlin coding conventions
+4. Ensure tests pass
+5. Submit a pull request
+
+## Architecture Decisions
+
+- **Clean Architecture**: Separation of concerns with clear dependency rules
+- **Repository Pattern**: Abstracts data sources (API + Database)
+- **Unidirectional Data Flow**: MVVM with reactive streams
+- **Error Handling**: Typed errors with user-friendly messages
+- **Coroutine Safety**: Proper cancellation handling with `runSuspendCatching`
+
+## License
+
+This project is for educational purposes.
