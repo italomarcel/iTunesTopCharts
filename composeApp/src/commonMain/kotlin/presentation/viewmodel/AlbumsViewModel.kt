@@ -17,7 +17,6 @@ import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.launch
 import presentation.state.AlbumsUiState
 import presentation.state.UiError
-import utils.runSuspendCatching
 
 class AlbumsViewModel(
     private val getTopAlbumsUseCase: GetTopAlbumsUseCase,
