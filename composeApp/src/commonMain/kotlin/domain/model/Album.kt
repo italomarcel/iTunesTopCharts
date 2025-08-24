@@ -8,5 +8,6 @@ data class Album(
     val artist: ArtistName,
     val imageUrl: String,
     val releaseDate: Instant,
-    val genre: String
+    val genre: String,
+    val iTunesUrl: String
 )

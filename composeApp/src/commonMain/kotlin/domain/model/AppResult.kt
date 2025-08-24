@@ -1,7 +1,10 @@
 package domain.model
 
-sealed class AppResult<out T> {
-    data class Success<T>(val data: T) : AppResult<T>()
-    data class Error(val error: AlbumError) : AppResult<Nothing>()
-    data object Loading : AppResult<Nothing>()
+import kotlin.jvm.JvmInline
+
+@JvmInline
+value class AlbumId(val value: String) {
+    init {
+        require(value.isNotBlank()) { "Album ID cannot be blank" }
+    }
 }

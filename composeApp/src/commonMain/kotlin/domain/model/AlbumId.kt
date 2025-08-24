@@ -6,6 +6,6 @@ import kotlin.jvm.JvmInline
 value class AlbumId private constructor(val value: String) {
     companion object {
         fun fromString(value: String?): AlbumId? =
-            value?.takeIf { it.isNotBlank() }?.let { AlbumId(it) }
+            value?.takeIf { it.isNotBlank() }?.let(::AlbumId)
     }
 }
