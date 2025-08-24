@@ -1,8 +1,6 @@
-import org.gradle.kotlin.dsl.implementation
-
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
-    alias(libs.plugins.androidLibrary)
+    alias(libs.plugins.androidApplication)
     alias(libs.plugins.jetbrainsCompose)
     alias(libs.plugins.composeCompiler)
     alias(libs.plugins.kotlinSerialization)
@@ -58,9 +56,11 @@ kotlin {
         androidMain.dependencies {
             implementation(libs.ktor.client.okhttp)
             implementation(libs.sqldelight.android.driver)
+
             implementation(libs.androidx.activity.compose)
             implementation(libs.androidx.core.ktx)
             implementation(libs.androidx.lifecycle.viewmodel.compose)
+
             implementation(libs.koin.android)
             implementation(libs.navigation.compose)
 
@@ -92,12 +92,25 @@ android {
     compileSdk = 35
 
     defaultConfig {
+        applicationId = "com.company.itunes"
         minSdk = 24
+        targetSdk = 35
+        versionCode = 1
+        versionName = "1.0"
     }
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
+    }
+
+    buildTypes {
+        release {
+            isMinifyEnabled = true
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt")
+            )
+        }
     }
 }
 
