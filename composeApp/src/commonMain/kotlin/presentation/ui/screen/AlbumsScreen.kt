@@ -17,91 +17,97 @@ import presentation.state.AlbumsUiState
 import presentation.state.UiError
 import presentation.ui.component.AlbumCard
 
-private object AlbumsScreenDimensions {
-    val screenPadding = 16.dp
-    val searchBarPadding = 8.dp
-    val itemSpacing = 8.dp
-    val errorPadding = 32.dp
-    val loadingPadding = 64.dp
-    val emptyStatePadding = 48.dp
-}
+private object AlbumsScreenDefaults {
+    val ScreenPadding = 16.dp
+    val SearchPadding = 8.dp
+    val ItemSpacing = 8.dp
+    val StateContentSpacing = 16.dp
+    val StateContentPadding = 32.dp
+    val RetryButtonSpacing = 8.dp
 
-private object AlbumsScreenLimits {
-    const val maxSearchQueryLength = 100
+    const val MaxSearchLength = 100
+    const val SearchPlaceholder = "Search albums or artists..."
+    const val LoadingMessage = "Loading albums..."
+    const val EmptyMessage = "No albums to display"
+    const val RetryButtonText = "Try Again"
+    const val SearchContentDescription = "Search"
+    const val RefreshContentDescription = "Refresh albums"
 }
 
 @Composable
 fun AlbumsScreen(
     uiState: AlbumsUiState,
-    onLoadAlbums: () -> Unit,
-    onRefreshAlbums: () -> Unit,
     onSearchQueryChange: (String) -> Unit,
     onAlbumClick: (Album) -> Unit,
+    onRefresh: () -> Unit,
     onRetry: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Column(
-        modifier = modifier.fillMaxSize()
-    ) {
-        SearchBar(
-            query = uiState.searchQuery,
-            onQueryChange = { query ->
-                if (query.length <= AlbumsScreenLimits.maxSearchQueryLength) {
+    Column(modifier = modifier.fillMaxSize()) {
+        AlbumsSearchBar(
+            query = uiState.searchQuery, onQueryChange = { query ->
+                if (query.length <= AlbumsScreenDefaults.MaxSearchLength) {
                     onSearchQueryChange(query)
                 }
-            },
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(AlbumsScreenDimensions.searchBarPadding)
+            }, modifier = Modifier.fillMaxWidth().padding(AlbumsScreenDefaults.SearchPadding)
         )
 
-        when {
-            uiState.isLoading && uiState.albums.isEmpty() -> {
-                LoadingState(
-                    modifier = Modifier.fillMaxSize()
-                )
-            }
+        AlbumsContent(
+            uiState = uiState,
+            onAlbumClick = onAlbumClick,
+            onRefresh = onRefresh,
+            onRetry = onRetry,
+            modifier = Modifier.fillMaxSize()
+        )
+    }
+}
 
-            uiState.hasError -> {
-                ErrorState(
-                    error = uiState.error,
-                    onRetry = onRetry,
-                    modifier = Modifier.fillMaxSize()
-                )
-            }
+@Composable
+private fun AlbumsContent(
+    uiState: AlbumsUiState,
+    onAlbumClick: (Album) -> Unit,
+    onRefresh: () -> Unit,
+    onRetry: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    when {
+        uiState.isLoading && uiState.albums.isEmpty() -> {
+            AlbumsLoadingState(modifier = modifier)
+        }
 
-            uiState.isEmpty -> {
-                EmptyState(
-                    modifier = Modifier.fillMaxSize()
-                )
-            }
+        uiState.hasError -> {
+            AlbumsErrorState(
+                error = uiState.error, onRetry = onRetry, modifier = modifier
+            )
+        }
 
-            else -> {
-                AlbumsList(
-                    albums = uiState.filteredAlbums,
-                    onAlbumClick = onAlbumClick,
-                    onRefresh = onRefreshAlbums,
-                    modifier = Modifier.fillMaxSize()
-                )
-            }
+        uiState.isEmpty -> {
+            AlbumsEmptyState(modifier = modifier)
+        }
+
+        else -> {
+            AlbumsSuccessState(
+                albums = uiState.filteredAlbums,
+                onAlbumClick = onAlbumClick,
+                onRefresh = onRefresh,
+                modifier = modifier
+            )
         }
     }
 }
 
 @Composable
-private fun SearchBar(
-    query: String,
-    onQueryChange: (String) -> Unit,
-    modifier: Modifier = Modifier
+private fun AlbumsSearchBar(
+    query: String, onQueryChange: (String) -> Unit, modifier: Modifier = Modifier
 ) {
     OutlinedTextField(
         value = query,
         onValueChange = onQueryChange,
-        placeholder = { Text("Search albums or artists...") },
+        placeholder = { Text(AlbumsScreenDefaults.SearchPlaceholder) },
         leadingIcon = {
             Icon(
                 imageVector = Icons.Default.Search,
-                contentDescription = "Search icon"
+                contentDescription = AlbumsScreenDefaults.SearchContentDescription
             )
         },
         singleLine = true,
@@ -110,7 +116,7 @@ private fun SearchBar(
 }
 
 @Composable
-private fun AlbumsList(
+private fun AlbumsSuccessState(
     albums: List<Album>,
     onAlbumClick: (Album) -> Unit,
     onRefresh: () -> Unit,
@@ -118,110 +124,105 @@ private fun AlbumsList(
 ) {
     LazyColumn(
         modifier = modifier,
-        contentPadding = PaddingValues(AlbumsScreenDimensions.screenPadding),
-        verticalArrangement = Arrangement.spacedBy(AlbumsScreenDimensions.itemSpacing)
+        contentPadding = PaddingValues(AlbumsScreenDefaults.ScreenPadding),
+        verticalArrangement = Arrangement.spacedBy(AlbumsScreenDefaults.ItemSpacing)
     ) {
         item {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.End
-            ) {
-                IconButton(onClick = onRefresh) {
-                    Icon(
-                        imageVector = Icons.Default.Refresh,
-                        contentDescription = "Refresh"
-                    )
-                }
-            }
+            AlbumsRefreshButton(onRefresh = onRefresh)
         }
 
         items(
-            items = albums,
-            key = { album -> album.id }
-        ) { album ->
+            items = albums, key = { album -> album.id }) { album ->
             AlbumCard(
-                album = album,
-                onAlbumClick = onAlbumClick
+                album = album, onAlbumClick = onAlbumClick
             )
         }
     }
 }
 
 @Composable
-private fun LoadingState(
-    modifier: Modifier = Modifier
+private fun AlbumsRefreshButton(
+    onRefresh: () -> Unit, modifier: Modifier = Modifier
 ) {
-    Box(
-        modifier = modifier,
-        contentAlignment = Alignment.Center
+    Row(
+        modifier = modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End
     ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(AlbumsScreenDimensions.loadingPadding)
-        ) {
-            CircularProgressIndicator()
-            Text(
-                text = "Loading albums...",
-                style = MaterialTheme.typography.bodyLarge
+        IconButton(onClick = onRefresh) {
+            Icon(
+                imageVector = Icons.Default.Refresh,
+                contentDescription = AlbumsScreenDefaults.RefreshContentDescription
             )
         }
     }
 }
 
 @Composable
-private fun ErrorState(
-    error: UiError?,
-    onRetry: () -> Unit,
+private fun AlbumsLoadingState(
     modifier: Modifier = Modifier
 ) {
-    Box(
-        modifier = modifier,
-        contentAlignment = Alignment.Center
-    ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(AlbumsScreenDimensions.errorPadding),
-            modifier = Modifier.padding(AlbumsScreenDimensions.errorPadding)
-        ) {
-            Text(
-                text = when (error) {
-                    is UiError.NetworkError -> "Network connection failed"
-                    is UiError.EmptyResponse -> "No albums found"
-                    is UiError.Unknown -> error.message
-                    null -> "Unknown error occurred"
-                },
-                style = MaterialTheme.typography.titleMedium,
-                textAlign = TextAlign.Center
-            )
-
-            Button(
-                onClick = onRetry,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Refresh,
-                    contentDescription = null
-                )
-                Spacer(modifier = Modifier.width(AlbumsScreenDimensions.searchBarPadding))
-                Text("Try Again")
-            }
-        }
-    }
-}
-
-@Composable
-private fun EmptyState(
-    modifier: Modifier = Modifier
-) {
-    Box(
-        modifier = modifier,
-        contentAlignment = Alignment.Center
-    ) {
+    CenteredStateContent(modifier = modifier) {
+        CircularProgressIndicator()
         Text(
-            text = "No albums to display",
-            style = MaterialTheme.typography.titleMedium,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.padding(AlbumsScreenDimensions.emptyStatePadding)
+            text = AlbumsScreenDefaults.LoadingMessage, style = MaterialTheme.typography.bodyLarge
         )
     }
+}
+
+@Composable
+private fun AlbumsErrorState(
+    error: UiError?, onRetry: () -> Unit, modifier: Modifier = Modifier
+) {
+    CenteredStateContent(modifier = modifier) {
+        Text(
+            text = error.getErrorMessage(),
+            style = MaterialTheme.typography.titleMedium,
+            textAlign = TextAlign.Center
+        )
+
+        Button(
+            onClick = onRetry, modifier = Modifier.fillMaxWidth()
+        ) {
+            Icon(
+                imageVector = Icons.Default.Refresh, contentDescription = null
+            )
+            Spacer(modifier = Modifier.width(AlbumsScreenDefaults.RetryButtonSpacing))
+            Text(AlbumsScreenDefaults.RetryButtonText)
+        }
+    }
+}
+
+@Composable
+private fun AlbumsEmptyState(
+    modifier: Modifier = Modifier
+) {
+    CenteredStateContent(modifier = modifier) {
+        Text(
+            text = AlbumsScreenDefaults.EmptyMessage,
+            style = MaterialTheme.typography.titleMedium,
+            textAlign = TextAlign.Center
+        )
+    }
+}
+
+@Composable
+private fun CenteredStateContent(
+    modifier: Modifier = Modifier, content: @Composable ColumnScope.() -> Unit
+) {
+    Box(
+        modifier = modifier, contentAlignment = Alignment.Center
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(AlbumsScreenDefaults.StateContentSpacing),
+            modifier = Modifier.padding(AlbumsScreenDefaults.StateContentPadding),
+            content = content
+        )
+    }
+}
+
+private fun UiError?.getErrorMessage(): String = when (this) {
+    is UiError.NetworkError -> "Network connection failed"
+    is UiError.EmptyResponse -> "No albums found"
+    is UiError.Unknown -> this.message
+    null -> "Unknown error occurred"
 }

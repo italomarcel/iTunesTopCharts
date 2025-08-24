@@ -5,15 +5,19 @@ import io.ktor.client.*
 import io.ktor.client.plugins.*
 import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.plugins.logging.*
+import io.ktor.client.request.*
+import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
 import kotlinx.serialization.json.Json
 import org.koin.core.qualifier.named
-import io.ktor.client.request.*
 import org.koin.dsl.module
 import kotlin.time.Duration.Companion.seconds
 
-private const val NETWORK_TIMEOUT_SECONDS = 30L
-private val NETWORK_TIMEOUT = NETWORK_TIMEOUT_SECONDS.seconds
+private object NetworkDefaults {
+    const val TIMEOUT_SECONDS = 30L
+    val TIMEOUT_DURATION = TIMEOUT_SECONDS.seconds
+    const val MAX_RETRIES = 3
+}
 
 val networkModule = module {
 
@@ -29,7 +33,8 @@ val networkModule = module {
     single {
         HttpClient {
             install(ContentNegotiation) {
-                json(get(named("jsonConfig")))
+                json(get(named("jsonConfig")), ContentType.Application.Json)
+                json(get(named("jsonConfig")), ContentType.Text.JavaScript)
             }
 
             install(Logging) {
@@ -38,18 +43,18 @@ val networkModule = module {
             }
 
             install(HttpTimeout) {
-                requestTimeoutMillis = NETWORK_TIMEOUT.inWholeMilliseconds
-                connectTimeoutMillis = NETWORK_TIMEOUT.inWholeMilliseconds
-                socketTimeoutMillis = NETWORK_TIMEOUT.inWholeMilliseconds
+                requestTimeoutMillis = NetworkDefaults.TIMEOUT_DURATION.inWholeMilliseconds
+                connectTimeoutMillis = NetworkDefaults.TIMEOUT_DURATION.inWholeMilliseconds
+                socketTimeoutMillis = NetworkDefaults.TIMEOUT_DURATION.inWholeMilliseconds
             }
 
             install(DefaultRequest) {
-                header("Accept", "application/json")
+                header("Accept", "application/json, text/javascript")
                 header("Content-Type", "application/json")
             }
 
             install(HttpRequestRetry) {
-                retryOnServerErrors(maxRetries = 3)
+                retryOnServerErrors(maxRetries = NetworkDefaults.MAX_RETRIES)
                 exponentialDelay()
             }
         }

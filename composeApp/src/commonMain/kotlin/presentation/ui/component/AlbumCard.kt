@@ -9,111 +9,137 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import coil3.compose.AsyncImage
 import domain.model.Album
-import io.kamel.image.KamelImage
-import io.kamel.image.asyncPainterResource
+
+private object AlbumCardDefaults {
+    val CardElevation = 6.dp
+    val CardPadding = 16.dp
+    val ArtworkSize = 80.dp
+    val ArtworkCornerRadius = 12.dp
+    val ElementSpacing = 16.dp
+    val TextSpacing = 6.dp
+    val CategoryTopPadding = 4.dp
+    val CategoryCornerRadius = 16.dp
+    val CategoryHorizontalPadding = 8.dp
+    val CategoryVerticalPadding = 4.dp
+
+    const val ALBUM_NAME_MAX_LINES = 2
+    const val ARTIST_NAME_MAX_LINES = 1
+    const val CATEGORY_MAX_LINES = 1
+}
 
 @Composable
 fun AlbumCard(
-    album: Album,
-    onAlbumClick: (Album) -> Unit,
-    modifier: Modifier = Modifier
+    album: Album, onAlbumClick: (Album) -> Unit, modifier: Modifier = Modifier
 ) {
     Card(
-        modifier = modifier
-            .fillMaxWidth()
-            .clickable { onAlbumClick(album) },
-        elevation = CardDefaults.cardElevation(
-            defaultElevation = 6.dp
-        ),
-        colors = CardDefaults.cardColors(
+        modifier = modifier.fillMaxWidth().clickable(
+            role = Role.Button, onClickLabel = "View album ${album.name}"
+        ) { onAlbumClick(album) }, elevation = CardDefaults.cardElevation(
+            defaultElevation = AlbumCardDefaults.CardElevation
+        ), colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface
         )
     ) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            horizontalArrangement = Arrangement.spacedBy(16.dp),
+            modifier = Modifier.fillMaxWidth().padding(AlbumCardDefaults.CardPadding),
+            horizontalArrangement = Arrangement.spacedBy(AlbumCardDefaults.ElementSpacing),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            KamelImage(
-                resource = { asyncPainterResource(album.artworkUrl) },
-                contentDescription = "Album artwork for ${album.name}",
-                modifier = Modifier
-                    .size(80.dp)
-                    .clip(RoundedCornerShape(12.dp)),
-                contentScale = ContentScale.Crop,
-                onLoading = { progress ->
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        CircularProgressIndicator(
-                            progress = { progress },
-                            modifier = Modifier.size(24.dp),
-                            strokeWidth = 2.dp
-                        )
-                    }
-                },
-                onFailure = { _ ->
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .clip(RoundedCornerShape(12.dp)),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = "?",
-                            style = MaterialTheme.typography.headlineLarge,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
+            AlbumArtwork(
+                imageUrl = album.artworkUrl, albumName = album.name
             )
 
-            Column(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(6.dp)
-            ) {
-                Text(
-                    text = album.name,
-                    style = MaterialTheme.typography.titleMedium.copy(
-                        fontWeight = FontWeight.SemiBold
-                    ),
-                    color = MaterialTheme.colorScheme.onSurface,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis
-                )
-
-                Text(
-                    text = album.artistName,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-
-                if (album.category.isNotEmpty()) {
-                    Surface(
-                        color = MaterialTheme.colorScheme.primaryContainer,
-                        shape = RoundedCornerShape(16.dp),
-                        modifier = Modifier.padding(top = 4.dp)
-                    ) {
-                        Text(
-                            text = album.category,
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer,
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                    }
-                }
-            }
+            AlbumInfo(
+                album = album, modifier = Modifier.weight(1f)
+            )
         }
+    }
+}
+
+@Composable
+private fun AlbumArtwork(
+    imageUrl: String, albumName: String, modifier: Modifier = Modifier
+) {
+    AsyncImage(
+        model = imageUrl,
+        contentDescription = "Album artwork for $albumName",
+        modifier = modifier.size(AlbumCardDefaults.ArtworkSize)
+            .clip(RoundedCornerShape(AlbumCardDefaults.ArtworkCornerRadius)),
+        contentScale = ContentScale.Crop
+    )
+}
+
+@Composable
+private fun AlbumInfo(
+    album: Album, modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier,
+        verticalArrangement = Arrangement.spacedBy(AlbumCardDefaults.TextSpacing)
+    ) {
+        AlbumTitle(album.name)
+        ArtistName(album.artistName)
+        if (album.category.isNotEmpty()) {
+            CategoryChip(album.category)
+        }
+    }
+}
+
+@Composable
+private fun AlbumTitle(
+    title: String, modifier: Modifier = Modifier
+) {
+    Text(
+        text = title,
+        modifier = modifier,
+        style = MaterialTheme.typography.titleMedium.copy(
+            fontWeight = FontWeight.SemiBold
+        ),
+        color = MaterialTheme.colorScheme.onSurface,
+        maxLines = AlbumCardDefaults.ALBUM_NAME_MAX_LINES,
+        overflow = TextOverflow.Ellipsis
+    )
+}
+
+@Composable
+private fun ArtistName(
+    artistName: String, modifier: Modifier = Modifier
+) {
+    Text(
+        text = artistName,
+        modifier = modifier,
+        style = MaterialTheme.typography.bodyMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        maxLines = AlbumCardDefaults.ARTIST_NAME_MAX_LINES,
+        overflow = TextOverflow.Ellipsis
+    )
+}
+
+@Composable
+private fun CategoryChip(
+    category: String, modifier: Modifier = Modifier
+) {
+    Surface(
+        color = MaterialTheme.colorScheme.primaryContainer,
+        shape = RoundedCornerShape(AlbumCardDefaults.CategoryCornerRadius),
+        modifier = modifier.padding(top = AlbumCardDefaults.CategoryTopPadding)
+    ) {
+        Text(
+            text = category,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onPrimaryContainer,
+            modifier = Modifier.padding(
+                horizontal = AlbumCardDefaults.CategoryHorizontalPadding,
+                vertical = AlbumCardDefaults.CategoryVerticalPadding
+            ),
+            maxLines = AlbumCardDefaults.CATEGORY_MAX_LINES,
+            overflow = TextOverflow.Ellipsis
+        )
     }
 }
