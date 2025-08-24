@@ -7,6 +7,8 @@ import domain.repository.AlbumsRepository
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emptyFlow
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.*
 import org.junit.Test
@@ -47,10 +49,12 @@ class RefreshAlbumsUseCaseTest {
             val useCase = RefreshAlbumsUseCase(repository)
 
             // When
-            val result = useCase()
+            val results = useCase().toList()
 
             // Then
-            assertEquals(AppResult.Success(TEST_ALBUMS), result)
+            assertEquals(2, results.size)
+            assertEquals(AppResult.Loading, results[0])
+            assertEquals(AppResult.Success(TEST_ALBUMS), results[1])
         }
 
     @Test
@@ -61,10 +65,12 @@ class RefreshAlbumsUseCaseTest {
             val useCase = RefreshAlbumsUseCase(repository)
 
             // When
-            val result = useCase()
+            val results = useCase().toList()
 
             // Then
-            assertEquals(AppResult.Success(EMPTY_ALBUMS), result)
+            assertEquals(2, results.size)
+            assertEquals(AppResult.Loading, results[0])
+            assertEquals(AppResult.Success(EMPTY_ALBUMS), results[1])
         }
 
     @Test
@@ -76,10 +82,12 @@ class RefreshAlbumsUseCaseTest {
             val useCase = RefreshAlbumsUseCase(repository)
 
             // When
-            val result = useCase()
+            val results = useCase().toList()
 
             // Then
-            assertErrorResult(result, expectedError)
+            assertEquals(2, results.size)
+            assertEquals(AppResult.Loading, results[0])
+            assertErrorResult(results[1], expectedError)
         }
 
     @Test
@@ -91,13 +99,15 @@ class RefreshAlbumsUseCaseTest {
             val useCase = RefreshAlbumsUseCase(repository)
 
             // When
-            val result = useCase()
+            val results = useCase().toList()
 
             // Then
-            assertErrorResult(result, networkError)
+            assertEquals(2, results.size)
+            assertEquals(AppResult.Loading, results[0])
+            assertErrorResult(results[1], networkError)
             assertTrue(
                 "Error should be NetworkError",
-                (result as AppResult.Error).error is AlbumError.NetworkError
+                (results[1] as AppResult.Error).error is AlbumError.NetworkError
             )
         }
 
@@ -110,10 +120,12 @@ class RefreshAlbumsUseCaseTest {
             val useCase = RefreshAlbumsUseCase(repository)
 
             // When
-            val result = useCase()
+            val results = useCase().toList()
 
             // Then
-            assertErrorResult(result, cacheError)
+            assertEquals(2, results.size)
+            assertEquals(AppResult.Loading, results[0])
+            assertErrorResult(results[1], cacheError)
         }
 
     @Test
@@ -125,10 +137,12 @@ class RefreshAlbumsUseCaseTest {
             val useCase = RefreshAlbumsUseCase(repository)
 
             // When
-            val result = useCase()
+            val results = useCase().toList()
 
             // Then
-            assertErrorResult(result, timeoutError)
+            assertEquals(2, results.size)
+            assertEquals(AppResult.Loading, results[0])
+            assertErrorResult(results[1], timeoutError)
         }
 
     @Test
@@ -144,7 +158,7 @@ class RefreshAlbumsUseCaseTest {
             val useCase = RefreshAlbumsUseCase(repository)
 
             // When
-            val job = launch { useCase() }
+            val job = launch { useCase().toList() }
             started.await() // Ensure the call has started
             job.cancelAndJoin()
 
@@ -167,17 +181,17 @@ class RefreshAlbumsUseCaseTest {
             // When
             val results = coroutineScope {
                 List(CONCURRENT_CALLS_COUNT) {
-                    async { useCase() }
+                    async { useCase().toList() }
                 }.awaitAll()
             }
 
             // Then
             assertEquals("All calls should complete", CONCURRENT_CALLS_COUNT, callCounter.get())
-            results.forEach { result ->
+            results.forEach { flowResults ->
+                assertEquals("Each flow should emit 2 values", 2, flowResults.size)
+                assertEquals("First should be Loading", AppResult.Loading, flowResults[0])
                 assertEquals(
-                    "Each call should return success",
-                    AppResult.Success(TEST_ALBUMS),
-                    result
+                    "Second should be Success", AppResult.Success(TEST_ALBUMS), flowResults[1]
                 )
             }
         }
@@ -185,9 +199,7 @@ class RefreshAlbumsUseCaseTest {
     private fun assertErrorResult(result: AppResult<List<Album>>, expectedError: AlbumError) {
         assertTrue("Result should be error", result is AppResult.Error)
         assertEquals(
-            "Error should match expected",
-            expectedError,
-            (result as AppResult.Error).error
+            "Error should match expected", expectedError, (result as AppResult.Error).error
         )
     }
 }

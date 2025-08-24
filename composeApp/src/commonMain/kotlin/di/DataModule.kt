@@ -6,7 +6,6 @@ import data.remote.AlbumsRemoteDataSource
 import data.remote.ITunesApi
 import data.repository.AlbumsRepositoryImpl
 import domain.repository.AlbumsRepository
-import domain.usecase.GetAlbumDetailsUseCase
 import domain.usecase.GetTopAlbumsUseCase
 import domain.usecase.RefreshAlbumsUseCase
 import org.koin.core.module.dsl.singleOf
@@ -23,5 +22,4 @@ val dataModule = module {
 
     singleOf(::GetTopAlbumsUseCase)
     singleOf(::RefreshAlbumsUseCase)
-    singleOf(::GetAlbumDetailsUseCase)
 }

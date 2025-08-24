@@ -3,7 +3,8 @@ package presentation.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import domain.model.AppResult
-import domain.repository.AlbumsRepository
+import domain.usecase.GetTopAlbumsUseCase
+import domain.usecase.RefreshAlbumsUseCase
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -14,13 +15,12 @@ import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.CancellationException
 import presentation.state.AlbumsUiState
 import presentation.state.UiError
-import utils.runSuspendCatching
 
 class AlbumsViewModel(
-    private val repository: AlbumsRepository
+    private val getTopAlbumsUseCase: GetTopAlbumsUseCase,
+    private val refreshAlbumsUseCase: RefreshAlbumsUseCase
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(AlbumsUiState())
@@ -35,7 +35,7 @@ class AlbumsViewModel(
 
     private fun loadAlbums() {
         loadJob?.cancel()
-        loadJob = repository.getTopAlbums()
+        loadJob = getTopAlbumsUseCase()
             .distinctUntilChanged()
             .onStart {
                 _uiState.value = _uiState.value.copy(isLoading = true, error = null)
@@ -71,37 +71,32 @@ class AlbumsViewModel(
     fun refreshAlbums() {
         if (refreshJob?.isActive == true) return
 
-        refreshJob = viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isRefreshing = true)
-
-            runSuspendCatching { repository.refreshAlbums() }
-                .onSuccess { result ->
-                    _uiState.value = when (result) {
-                        is AppResult.Success -> _uiState.value.copy(
-                            albums = result.data,
-                            isRefreshing = false,
-                            error = null
-                        )
-
-                        is AppResult.Error -> _uiState.value.copy(
-                            isRefreshing = false,
-                            error = UiError.fromAlbumError(result.error)
-                        )
-
-                        is AppResult.Loading -> _uiState.value.copy(isRefreshing = false)
-                    }
-                }
-                .onFailure { exception ->
-                    _uiState.value = _uiState.value.copy(
+        refreshJob = refreshAlbumsUseCase()
+            .onEach { result ->
+                _uiState.value = when (result) {
+                    is AppResult.Loading -> _uiState.value.copy(isRefreshing = true, error = null)
+                    is AppResult.Success -> _uiState.value.copy(
+                        albums = result.data,
                         isRefreshing = false,
-                        error = UiError.fromAlbumError(
-                            domain.model.AlbumError.NetworkError(
-                                exception.message ?: "Refresh failed"
-                            )
-                        )
+                        error = null
+                    )
+                    is AppResult.Error -> _uiState.value.copy(
+                        isRefreshing = false,
+                        error = UiError.fromAlbumError(result.error)
                     )
                 }
-        }
+            }
+            .catch { exception ->
+                _uiState.value = _uiState.value.copy(
+                    isRefreshing = false,
+                    error = UiError.fromAlbumError(
+                        domain.model.AlbumError.NetworkError(
+                            exception.message ?: "Refresh failed"
+                        )
+                    )
+                )
+            }
+            .launchIn(viewModelScope)
     }
 
     fun updateSearchQuery(query: String) {

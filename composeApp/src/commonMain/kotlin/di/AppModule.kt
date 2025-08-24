@@ -4,5 +4,5 @@ import org.koin.dsl.module
 import presentation.viewmodel.AlbumsViewModel
 
 val appModule = module {
-    single { AlbumsViewModel(get()) }
+    single { AlbumsViewModel(get(), get()) }
 }
