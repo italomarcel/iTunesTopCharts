@@ -46,8 +46,7 @@ val networkModule = module {
             }
 
             install(DefaultRequest) {
-                header("Accept", "application/json")
-                header("Content-Type", "application/json")
+                header(HttpHeaders.Accept, "application/json, text/javascript, text/plain")
             }
 
             install(HttpRequestRetry) {
