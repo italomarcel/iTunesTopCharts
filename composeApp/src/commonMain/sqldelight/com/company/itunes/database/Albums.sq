@@ -1,0 +1,32 @@
+CREATE TABLE Albums (
+    id TEXT NOT NULL PRIMARY KEY,
+    name TEXT NOT NULL,
+    artistName TEXT NOT NULL,
+    artworkUrl TEXT NOT NULL,
+    releaseDate TEXT NOT NULL,
+    category TEXT NOT NULL,
+    albumUrl TEXT NOT NULL
+);
+
+selectAllAlbums:
+SELECT * FROM Albums ORDER BY rowid LIMIT :limit;
+
+selectAlbumById:
+SELECT * FROM Albums WHERE id = :albumId LIMIT 1;
+
+insertAlbum:
+INSERT OR REPLACE INTO Albums (id, name, artistName, artworkUrl, releaseDate, category, albumUrl)
+VALUES (?, ?, ?, ?, ?, ?, ?);
+
+deleteAllAlbums:
+DELETE FROM Albums;
+
+countAlbums:
+SELECT count(*) FROM Albums;
+
+searchAlbums:
+SELECT * FROM Albums
+WHERE name LIKE '%' || :query || '%'
+   OR artistName LIKE '%' || :query || '%'
+ORDER BY name
+LIMIT :limit;

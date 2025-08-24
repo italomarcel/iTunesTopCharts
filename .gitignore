@@ -117,7 +117,7 @@ $RECYCLE.BIN/
 .nfs*
 
 # SQLDelight generated files
-sqldelight/
+build/generated/sqldelight/
 
 # Compose Multiplatform Resources
 composeResources/
